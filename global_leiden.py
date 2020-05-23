@@ -185,9 +185,6 @@ def move_nodes_fast(graph, partition, report=False, mode='MOVE'):
 
 	# random.shuffle(queue_of_nodes)
 	
-	# add one empty community for when moving to an empty community is required
-	partition.append([])
-
 	while queue_of_nodes:
 		# determine the node to be investigated
 		(node, state) = queue_of_nodes.pop(0)
@@ -203,7 +200,6 @@ def move_nodes_fast(graph, partition, report=False, mode='MOVE'):
 		delta_mod[curr_com_index] = 0.0
 
 		# moving to an empty community should be evaluated too if the current community has more than one node
-		# since |C| == |V|, there always is at least one empty community if the below condition is satisfied.
 		if len(partition[curr_com_index]) != 1 and mode == 'MOVE':
 			try:
 				empty_com_index = partition.index([])
@@ -258,9 +254,6 @@ def move_nodes_refine(graph, partition, community, report=False, mode='MOVE'):
 
 	# random.shuffle(queue_of_nodes)
 	
-	# add one empty community for when moving to an empty community is required
-	partition.append([])
-
 	while queue_of_nodes:
 		# determine the node to be investigated
 		(node, state) = queue_of_nodes.pop(0)
@@ -276,7 +269,6 @@ def move_nodes_refine(graph, partition, community, report=False, mode='MOVE'):
 		delta_mod[curr_com_index] = 0.0
 
 		# moving to an empty community should be evaluated too if the current community has more than one node
-		# since |C| == |V|, there always is at least one empty community if the below condition is satisfied.
 		if len(partition[curr_com_index]) != 1 and mode == 'MOVE':
 			try:
 				empty_com_index = partition.index([])
@@ -375,7 +367,7 @@ def extract_final_communities_out_of_partition(partition, graph):
 			communities[i].extend(graph.nodes[node].get('inner_nodes', []))
 		communities[i] = sorted(communities[i])
 	sorted_indices = sorted(communities, key=lambda k:len(communities[k]), reverse=True)
-	return {index:communities[index] for index in sorted_indices}
+	return {i:communities[sorted_indices[i]] for i in range(len(sorted_indices))}
 
 
 def set_resolution_parameter(gamma):
