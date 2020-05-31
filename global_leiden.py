@@ -5,6 +5,7 @@ from copy import deepcopy
 from itertools import product
 import numpy as np
 import time
+from measures import modularity
 
 
 __GAMMA = 1.0
@@ -389,6 +390,8 @@ def __main():
 	
 	for com_index, nodes in communities.items():
 		print(com_index, ':', nodes, '\t', len(nodes))
+
+	print('modularity_value =', modularity(graph, communities))
 
 	finish_time = time.time()
 	print('\nDone in %.4f seconds.' %(finish_time - start_time))
