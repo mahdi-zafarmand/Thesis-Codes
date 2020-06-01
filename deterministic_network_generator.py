@@ -4,7 +4,7 @@ import random
 import measures
 
 
-num_nodes = 50              # number of nodes in the generated network
+num_nodes = 500             # number of nodes in the generated network
 tau1 = 3.0                  # parameter for degree distribution: must be strictly greater than 1
 tau2 = 1.5                  # parameter for community size distribution: must be strictly greater than 1
 mu = 0.1                    # faction of links between communities: must be in [0, 0.5]
