@@ -58,10 +58,6 @@ def pre_processing(graph, weighted, weight):
 	else:
 		compute_edge_strength(graph, weight)
 
-	# for n1, n2, edge in graph.edges(data=True):
-	# 	print(n1, n2, edge)
-	# exit(0)
-
 	all_dangles = []
 	dangles = remove_dangles(graph, list(graph.nodes()))
 	while(dangles):
@@ -74,16 +70,13 @@ def compute_edge_strength(graph_base, weight="weight"):
 	nodes = list(graph_base.nodes())
 	nb_vertices = len(nodes)
 	mutuals, max_mutuals, total_mutuals = get_mutuals(graph_base)
-	ccoef = clustering_coef(graph_base, total_mutuals)
-
-	edges_done = list()
 
 	for i in range(nb_vertices):
 		neighbors = list(graph_base.neighbors(nodes[i]))
 		max_mutual_node = max_mutuals.get(nodes[i])
 
 		for neigh in neighbors:
-			if (neigh, nodes[i]) in edges_done:
+			if graph_base[nodes[i]][neigh].get('done', False):
 				continue
 			max_mutual_neigh = max_mutuals.get(neigh)
 			w = mutuals.get(nodes[i]).get(neigh)
@@ -98,10 +91,9 @@ def compute_edge_strength(graph_base, weight="weight"):
 			except:
 				pass
 			w = (w1 + w2) / 2
-			graph_base.add_edge(nodes[i], neigh, weight= w)
-			edges_done.append((nodes[i], neigh))
+			graph_base.add_edge(nodes[i], neigh, weight= w, done=True)
 
-	return ccoef
+	return None
 
 
 def get_mutuals(graph_base):
@@ -274,11 +266,17 @@ def one_level(graph, inc_fnc, status, weight_key, randomize=False):
 	"""
 	modified = True
 	changed = False
+	trace_nodes_in = {x: True for x in list(graph.nodes())}
+	initial_com_indices = set(status.node2com.values())
+
 	while modified:
 		print('***')
 		modified = False
+		trace_nodes_out = {x: False for x in list(graph.nodes())}
 
 		for node in randomly(graph.nodes(), randomize):
+			if not trace_nodes_in[node]:
+				continue
 
 			com_node = status.node2com[node]
 			neigh_communities = neighcom(node, graph, status, weight_key)
@@ -296,7 +294,24 @@ def one_level(graph, inc_fnc, status, weight_key, randomize=False):
 			if best_com != com_node:
 				modified = True
 				changed = True
+				trace_nodes_out.update({x: True for x in list(graph.neighbors(node))})
 		
+		trace_nodes_in.update(trace_nodes_out)
+		communities = {com_index:[] for com_index in status.node2com.values()}
+		for node, com_index in status.node2com.items():
+			communities[com_index].append(node)
+
+		empty_com_indices = list(initial_com_indices - set(communities.keys()))
+
+		for com_index, nodes in communities.items():
+			connected_comps = list(nx.connected_components(graph.subgraph(nodes)))
+			if len(connected_comps) > 1:
+				for i in range(1, len(connected_comps)):
+					new_com_index = empty_com_indices.pop()
+					for node in connected_comps[i]:
+						remove_from_community(node, com_index, neigh_communities.get(com_index, 0.), status)
+						insert_to_community(node, new_com_index, neigh_communities.get(new_com_index, 0.), status)
+	
 	return changed
 
 

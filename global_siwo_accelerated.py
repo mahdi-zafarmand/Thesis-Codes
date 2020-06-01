@@ -58,6 +58,7 @@ def pre_processing(graph, weighted, weight):
 	else:
 		compute_edge_strength(graph, weight)
 
+
 	# for n1, n2, edge in graph.edges(data=True):
 	# 	print(n1, n2, edge)
 	# exit(0)
@@ -75,43 +76,37 @@ def compute_edge_strength(graph_base, weight="weight"):
 	nb_vertices = len(nodes)
 	mutuals, max_mutuals, total_mutuals = get_mutuals(graph_base)
 	ccoef = clustering_coef(graph_base, total_mutuals)
-
-	edges_done = list()
-
 	for i in range(nb_vertices):
 		neighbors = list(graph_base.neighbors(nodes[i]))
-		max_mutual_node = max_mutuals.get(nodes[i])
+		max_mutual = max_mutuals.get(nodes[i])
 
 		for neigh in neighbors:
-			if (neigh, nodes[i]) in edges_done:
+			if (ccoef.get(nodes[i]) < ccoef.get(neigh)):
 				continue
-			max_mutual_neigh = max_mutuals.get(neigh)
-			w = mutuals.get(nodes[i]).get(neigh)
-			w1 = 0.0
-			w2 = 0.0
-			try:
-				w1 = w / max_mutual_node
-			except:
-				pass
-			try:
-				w2 = w / max_mutual_neigh
-			except:
-				pass
-			w = (w1 + w2) / 2
+
+			cur_mutuals = mutuals.get(nodes[i])
+			# length of each bin
+			binlen = 2/(float)(max_mutual+1)
+			# min point of the bin
+			minpoint = -1 + (cur_mutuals.get(neigh) * binlen)
+			# max point of the bin
+			maxpoint = minpoint + binlen
+			# average point of the bin
+			avgpoint = (minpoint + maxpoint)/2.0
+			w = avgpoint
+
 			graph_base.add_edge(nodes[i], neigh, weight= w)
-			edges_done.append((nodes[i], neigh))
 
 	return ccoef
 
 
 def get_mutuals(graph_base):
-	mutuals = {}		# mutual[n1][n2]	= number of mutual neighbors between nodes n1 and n2
-	max_mutuals = {}	# max_mutuals[n]	= maximum number of mutuals between node n and any other node = max(mutuals[n][k])
-	total_mutuals = {}	# total_mutuals[n]	= number of total mutual of node n with any other node = signma(mutuals[n][k])
+	mutuals = {}
+	max_mutuals = {}
+	total_mutuals = {}
 	nodes = list(graph_base.nodes())
 	nb_vertices = len(nodes)
 
-	# initializing the return values
 	for i in range(nb_vertices):
 		mutuals[nodes[i]] = {}
 		max_mutuals[nodes[i]] = -1
@@ -134,7 +129,6 @@ def get_mutuals(graph_base):
 			if cur_mutual > max_mutuals[neigh]:
 				max_mutuals[neigh] = cur_mutual
 
-		# to avoid the double-counting
 		total_mutuals[nodes[i]] = total_mutuals[nodes[i]]/2.0
 
 	return mutuals, max_mutuals, total_mutuals
@@ -274,11 +268,16 @@ def one_level(graph, inc_fnc, status, weight_key, randomize=False):
 	"""
 	modified = True
 	changed = False
+	trace_nodes_in = {x: True for x in list(graph.nodes())}
+	
 	while modified:
 		print('***')
 		modified = False
+		trace_nodes_out = {x: False for x in list(graph.nodes())}
 
 		for node in randomly(graph.nodes(), randomize):
+			if not trace_nodes_in[node]:
+				continue
 
 			com_node = status.node2com[node]
 			neigh_communities = neighcom(node, graph, status, weight_key)
@@ -296,7 +295,10 @@ def one_level(graph, inc_fnc, status, weight_key, randomize=False):
 			if best_com != com_node:
 				modified = True
 				changed = True
-		
+				trace_nodes_out.update({x: True for x in list(graph.neighbors(node))})
+				
+		trace_nodes_in.update(trace_nodes_out)
+
 	return changed
 
 
