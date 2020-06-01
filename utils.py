@@ -17,7 +17,7 @@ def create_argument_parser():
     return parser.parse_args()
 
 
-def load_graph(path, weighted, report=True):
+def load_graph(path, weighted, self_loop=False, report=True):
     """This function reads the edge list then make the graph.
     
     Arguments:
@@ -45,7 +45,9 @@ def load_graph(path, weighted, report=True):
             v1 = int(line[1])
             graph.add_node(v1, size = 1)
             graph.add_node(v2, size = 1)
-            if v1 != v2:
+            if self_loop:
+                graph.add_edge(v1, v2, weight = w)                
+            elif v1 != v2:
                 graph.add_edge(v1, v2, weight = w)
 
     # Build the largest connected component if the whole graph is not connected.
