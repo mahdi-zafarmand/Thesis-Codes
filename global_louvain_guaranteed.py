@@ -113,6 +113,8 @@ def __one_level(graph, status, weight_key, resolution, random_state):
 	cur_mod = __modularity(status)
 	new_mod = cur_mod
 
+	initial_com_indices = set(status.node2com.values())
+
 	while modified and nb_pass_done != __PASS_MAX:
 		print('***')
 
@@ -153,6 +155,21 @@ def __one_level(graph, status, weight_key, resolution, random_state):
 			if best_com != com_node:
 			# if the community of a node changes
 				modified = True
+
+		communities = {com_index:[] for com_index in status.node2com.values()}
+		for node, com_index in status.node2com.items():
+			communities[com_index].append(node)
+
+		empty_com_indices = list(initial_com_indices - set(communities.keys()))
+
+		for com_index, nodes in communities.items():
+			connected_comps = list(nx.connected_components(graph.subgraph(nodes)))
+			if len(connected_comps) > 1:
+				for i in range(1, len(connected_comps)):
+					new_com_index = empty_com_indices.pop()
+					for node in connected_comps[i]:
+						__remove(node, com_index, neigh_communities.get(com_index, 0.), status)
+						__insert(node, new_com_index, neigh_communities.get(new_com_index, 0.), status)
 
 		new_mod = __modularity(status)
 		# computes the new modularity of the graph based on new assigned communities

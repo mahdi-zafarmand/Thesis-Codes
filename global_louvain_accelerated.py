@@ -112,15 +112,19 @@ def __one_level(graph, status, weight_key, resolution, random_state):
 	nb_pass_done = 0
 	cur_mod = __modularity(status)
 	new_mod = cur_mod
+	trace_nodes_in = {x: True for x in list(graph.nodes())}
 
 	while modified and nb_pass_done != __PASS_MAX:
 		print('***')
+		trace_nodes_out = {x: False for x in list(graph.nodes())}
 
 		cur_mod = new_mod
 		modified = False
 		nb_pass_done += 1
 		
 		for node in random_state.permutation(list(graph.nodes())):
+			if not trace_nodes_in[node]:
+				continue
 
 			com_node = status.node2com[node]
 
@@ -153,6 +157,9 @@ def __one_level(graph, status, weight_key, resolution, random_state):
 			if best_com != com_node:
 			# if the community of a node changes
 				modified = True
+				trace_nodes_out.update({x: True for x in list(graph.neighbors(node))})
+
+		trace_nodes_in.update(trace_nodes_out)
 
 		new_mod = __modularity(status)
 		# computes the new modularity of the graph based on new assigned communities
