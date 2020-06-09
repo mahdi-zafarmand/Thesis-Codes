@@ -19,8 +19,11 @@ def main():
 	args = utils.create_argument_parser()
 	graph = utils.load_graph(args.dataset, args.w)
 	c = greedy_modularity_communities(graph)
-	communities = dict()
 
+	finish_time = time.time()
+	print('\nDone in %.4f seconds.' %(finish_time - start_time))
+
+	communities = dict()
 	for i in range(len(c)):
 		communities[i] = list(c[i])
 
