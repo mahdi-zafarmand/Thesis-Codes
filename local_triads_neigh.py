@@ -63,9 +63,20 @@ def find_best_next_node(graph, community, shell_set, Tin_prev, Tout_prev):
     return best_node, dict_of_Tin[best_node], dict_of_Tex[best_node]
 
 
+def find_highest_deg_neighbor(graph, node):
+    node_to_return = node
+    deg = graph.degree[node_to_return]
+    for neigh in graph.neighbors(node):
+        if graph.degree[neigh] > deg:
+            node_to_return = neigh
+            deg = graph.degree[neigh]
+    return node_to_return
+
+
 def community_search(graph, initial_node):    
+    initial_node = find_highest_deg_neighbor(graph, initial_node)
     print('Starts with :', initial_node)
-    
+
     community = [initial_node]
     shell_set = list(graph.neighbors(initial_node))
     Tin = calc_T_in(graph, initial_node, [], 0.0)
@@ -96,6 +107,7 @@ def main():
 
     args = utils.create_argument_parser()
     graph = utils.load_graph(args.dataset, args.w)
+
     intended_node = int(args.output)
 
     community = community_search(graph, intended_node)

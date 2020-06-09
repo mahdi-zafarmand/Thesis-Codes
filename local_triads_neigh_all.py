@@ -3,6 +3,9 @@ import time
 import networkx as nx
 import random
 import os.path
+from copy import deepcopy
+from measures import modularity
+from measures import NMI
 
 
 def calc_T_in(graph, node, community, Tin_prev):
@@ -63,9 +66,19 @@ def find_best_next_node(graph, community, shell_set, Tin_prev, Tout_prev):
     return best_node, dict_of_Tin[best_node], dict_of_Tex[best_node]
 
 
-def community_search(graph, initial_node):    
-    print('Starts with :', initial_node)
-    
+def find_highest_deg_neighbor(graph):
+    nodes = list(graph.nodes())
+    node_to_return = nodes[0]
+    for i in range(1, len(nodes)):
+        if graph.degree[nodes[i]] > graph.degree[node_to_return]:
+            node_to_return = nodes[i]
+    return node_to_return
+
+
+def community_search(graph):    
+    initial_node = find_highest_deg_neighbor(graph)
+    # print('Starts with :', initial_node)
+
     community = [initial_node]
     shell_set = list(graph.neighbors(initial_node))
     Tin = calc_T_in(graph, initial_node, [], 0.0)
@@ -87,8 +100,18 @@ def community_search(graph, initial_node):
         
         else:
             break
-        
-    return community
+
+    return sorted(community)
+
+
+def community_detection(graph):
+    communities = list()
+    while graph.number_of_nodes() > 0:
+        community = community_search(graph)
+        communities.append(community)
+        graph.remove_nodes_from(community)
+
+    return communities
 
 
 def main():
@@ -96,10 +119,20 @@ def main():
 
     args = utils.create_argument_parser()
     graph = utils.load_graph(args.dataset, args.w)
-    intended_node = int(args.output)
+    graph_copy = deepcopy(graph)
+    
+    communities = community_detection(graph)
+    com_dict = {}
 
-    community = community_search(graph, intended_node)
-    print('community =', community, len(community))
+    for i in range(len(communities)):
+        com_dict[i] = communities[i]
+
+    utils.print_comm_info_to_display(com_dict)
+    # output_name = args.dataset[args.dataset.rindex('/'):]
+    # utils.write_comm_info_to_file(output_name, com_dict)
+
+    print('modularity_value =', modularity(graph_copy, com_dict))
+    print('NMI =', NMI(args.output, com_dict))
 
     finish_time = time.time()
     print('\nDone in %.4f seconds.' %(finish_time - start_time))
