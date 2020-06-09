@@ -19,14 +19,12 @@ def preprocess(graph_base, weight="weight"):
 	nb_vertices = len(nodes)
 	mutuals, max_mutuals, total_mutuals = get_mutuals(graph_base)
 
-	edges_done = list()
-
 	for i in range(nb_vertices):
 		neighbors = list(graph_base.neighbors(nodes[i]))
 		max_mutual_node = max_mutuals.get(nodes[i])
 
 		for neigh in neighbors:
-			if (neigh, nodes[i]) in edges_done:
+			if graph_base[nodes[i]][neigh].get('done', False):
 				continue
 			max_mutual_neigh = max_mutuals.get(neigh)
 			w = mutuals.get(nodes[i]).get(neigh)
@@ -41,8 +39,7 @@ def preprocess(graph_base, weight="weight"):
 			except:
 				pass
 			w = (w1 + w2) / 2
-			graph_base.add_edge(nodes[i], neigh, weight= w)
-			edges_done.append((nodes[i], neigh))
+			graph_base.add_edge(nodes[i], neigh, weight=w, done=True)
 
 
 def get_mutuals(graph_base):
@@ -103,10 +100,13 @@ def main():
 	graph_copy = deepcopy(graph)
 
 	preprocess(graph)
-
 	c = greedy_modularity_communities(graph)
-	communities = dict()
+	
+	finish_time = time.time()
+	print('\nDone in %.4f seconds.' %(finish_time - start_time))
 
+
+	communities = dict()
 	for i in range(len(c)):
 		communities[i] = list(c[i])
 

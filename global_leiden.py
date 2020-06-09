@@ -388,10 +388,14 @@ def __main():
 	partition, graph = run_leiden(graph, partition, report=False)
 	communities = extract_final_communities_out_of_partition(partition, graph)
 	
+	finish_time = time.time()
+	print('\nDone in %.4f seconds.' %(finish_time - start_time))
+
 	for com_index, nodes in communities.items():
 		print(com_index, ':', nodes, '\t', len(nodes))
 
 	print('modularity_value =', modularity(graph, communities))
+	print('NMI =', NMI(args.output, partition))
 
 	finish_time = time.time()
 	print('\nDone in %.4f seconds.' %(finish_time - start_time))
