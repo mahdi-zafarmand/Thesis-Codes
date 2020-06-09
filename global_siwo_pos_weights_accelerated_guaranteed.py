@@ -1,5 +1,5 @@
 import networkx as nx
-from community_status import Status
+from aux_community_status import Status
 import utils
 import time
 from measures import modularity
@@ -93,8 +93,6 @@ def compute_edge_strength(graph_base, weight="weight"):
 			w = (w1 + w2) / 2
 			graph_base.add_edge(nodes[i], neigh, weight= w, done=True)
 
-	return None
-
 
 def get_mutuals(graph_base):
 	mutuals = {}		# mutual[n1][n2]	= number of mutual neighbors between nodes n1 and n2
@@ -144,20 +142,6 @@ def shared_neighbors_cnt(graph_base, u, v):
 		if n1 in neighbors_v:
 			shared = shared+1
 	return shared
-
-
-def clustering_coef(graph_base, total_mutuals):
-	clust_coef = {}
-	nodes = list(graph_base.nodes())
-	for node in nodes:
-		total_mutual = total_mutuals[node]
-		deg = graph_base.degree(node)
-		possible_tri = (deg * (deg-1)) / 2
-		if possible_tri == 0:
-			clust_coef[node] = 1
-		else:
-			clust_coef[node] = total_mutual/float(possible_tri)
-	return clust_coef
 
 
 def normalize_weights(graph, ccoef, weight="weight"):
@@ -553,8 +537,11 @@ def main():
 	graph = utils.load_graph(args.dataset, args.w)
 	partition = best_partition(graph)
 
+	finish_time = time.time()
+	print('\nDone in %.4f seconds.' %(finish_time - start_time))
+
 	communities = utils.extract_communities(partition)
-	# utils.print_comm_info_to_display(communities)
+	utils.print_comm_info_to_display(communities)
 	utils.write_comm_info_to_file(args.output, partition)
 
 	# print('modularity_value =', modularity(graph, communities))

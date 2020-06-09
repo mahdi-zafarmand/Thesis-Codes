@@ -1,5 +1,5 @@
 import networkx as nx
-from community_status import Status
+from aux_community_status import Status
 import utils
 import time
 from measures import modularity
@@ -57,11 +57,6 @@ def pre_processing(graph, weighted, weight):
 		combine_weights(graph)
 	else:
 		compute_edge_strength(graph, weight)
-
-
-	# for n1, n2, edge in graph.edges(data=True):
-	# 	print(n1, n2, edge)
-	# exit(0)
 
 	all_dangles = []
 	dangles = remove_dangles(graph, list(graph.nodes()))
@@ -532,9 +527,12 @@ def main():
 	graph = utils.load_graph(args.dataset, args.w)
 	partition = best_partition(graph)
 
+	finish_time = time.time()
+	print('\nDone in %.4f seconds.' %(finish_time - start_time))
+
 	communities = utils.extract_communities(partition)
-	# utils.print_comm_info_to_display(communities)
-	utils.write_comm_info_to_file(args.output, partition)
+	utils.print_comm_info_to_display(communities)
+	# utils.write_comm_info_to_file(args.output, partition)
 
 	# print('modularity_value =', modularity(graph, communities))
 	# print('NMI =', NMI(args.output, partition))
