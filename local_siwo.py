@@ -11,7 +11,6 @@ def create_argument_parser():
 	parser = argparse.ArgumentParser(description='The SIWO algorithm', prog="SIWO")
 	parser.add_argument('dataset', help='Path to the network files')
 	parser.add_argument('output', help='output name')
-	parser.add_argument('support', help='support value')
 	return parser.parse_args()
 
 
@@ -67,7 +66,7 @@ def assign_local_strength(graph, node, mutuals, max_mutuals):
 			w2 = w / max_mutual_neigh
 		except:
 			pass
-		w = (w1 + w2)/2.0
+		w = w1 + w2 - 1.0
 		graph.add_edge(node, neigh, strength=w)
 
 
@@ -104,79 +103,38 @@ def compute_total_strength(graph, community, new_node):
 			if neigh in all_node:
 				quality += graph[node][neigh].get('strength', 0.0)
 
-	return quality / 2
+	return quality / 2.0
 
 
-def community_search_one_round(graph, initial_node):
-	cur_quality = 0.0	
-	mutuals = {}
-	max_mutuals = {}
+def community_search(graph, intended_node):
+	mutuals = dict()
+	max_mutuals = dict()
 
-	community = [initial_node]
-	assign_local_strength(graph, initial_node, mutuals, max_mutuals)
+	community = list()
+	cur_quality = 0.0
 
-	while True:
+	community.append(intended_node)
+	assign_local_strength(graph, intended_node, mutuals, max_mutuals)
+
+	while len(community) < graph.number_of_nodes():
 		new_candidates = find_new_candidates(graph, community)
+
+		if new_candidates == []:
+			break
+
+		for candidate in new_candidates:
+			assign_local_strength(graph, candidate, mutuals, max_mutuals)
+
 		new_node = expand_community(graph, community, new_candidates)
 		new_quality = compute_total_strength(graph, community, new_node)
-		
+
 		if new_quality - cur_quality < __MIN:
 			break
 
 		community.append(new_node)
 		cur_quality = new_quality
 
-	return sorted(community), cur_quality
-
-
-# def community_search_multiple(graph, intended_node, min_support):
-# 	communities = dict()
-# 	community, quality_main = community_search_one_round(graph, intended_node)
-# 	communities[intended_node] = (community, quality_main)
-
-# 	for i in range(1, len(community)):
-# 		comm, quality_other = community_search_one_round(graph, community[i])
-# 		communities[community[i]] = (comm, quality_other)
-
-# 	all_candidates = dict()
-# 	for com, (nodes, q) in communities.items():
-# 		for node in nodes:
-# 			all_candidates[node] = all_candidates.get(node, 0) + 1
-
-# 	final_answer = list()
-# 	for candidate, num_repeat in all_candidates.items():
-# 		if num_repeat > min_support * len(communities):
-# 			final_answer.append(candidate)
-
-# 	return final_answer
-
-
-def community_search_multiple(graph, intended_node, min_support):
-	communities = dict()
-	community, quality_main = community_search_one_round(graph, intended_node)
-	communities[intended_node] = (community, quality_main)
-
-	neighbors = graph.neighbors(intended_node)
-
-	for neigh in neighbors:
-		comm, quality_other = community_search_one_round(graph, neigh)
-		communities[neigh] = (comm, quality_other)
-
-	# for k, v in communities.items():
-	# 	print(k, sorted(v[0]), v[1], len(v[0]), v[1] / len(v[0]))
-
-	all_candidates = dict()
-	for com, (nodes, q) in communities.items():
-		for node in nodes:
-			all_candidates[node] = all_candidates.get(node, 0) + 1
-
-	final_answer = list()
-	for candidate, num_repeat in all_candidates.items():
-		if num_repeat > min_support * len(communities):
-			final_answer.append(candidate)
-
-	return final_answer
-
+	return community
 
 
 def amend_by_dangles(graph, community):
@@ -196,11 +154,9 @@ def _main():
 	graph = utils.load_graph(args.dataset, False)
 
 	intended_node = int(args.output)
-	min_support = float(args.support)
 
-	community = community_search_one_round(graph, intended_node)[0]
-	# community = community_search_multiple(graph, intended_node, min_support)
-	# community = amend_by_dangles(graph, community)
+	community = community_search(graph, intended_node)
+	community = amend_by_dangles(graph, community)
 	print('community =', community, len(community))
 
 	finish_time = time.time()
