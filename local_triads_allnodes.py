@@ -3,6 +3,7 @@ import time
 import networkx as nx
 import random
 import os.path
+from operator import eq
 
 
 def calc_T_in(graph, node, community, Tin_prev):
@@ -100,8 +101,62 @@ def community_search(graph, given_node):
 
 	if not given_node in community:
 		community = []
-
+		
 	return sorted(community)
+
+
+def read_ground_truth(file_address):
+	ground_truth = dict()
+	with open(file_address, 'r') as file:
+		lines = file.readlines()
+		for line in lines:
+			line = line.split()
+			ground_truth[int(line[0])] = int(line[1])
+
+	communities = dict()
+	for node1 in ground_truth:
+		new_set = set()
+		for node2 in ground_truth:
+			if ground_truth[node1] == ground_truth[node2]:
+				new_set.add(node2)
+		communities[node1] = list(new_set)
+
+	return communities
+
+
+def calc_accuracy(communities, ground_truth):
+	precision = dict()
+	recall = dict()
+	f1_score = dict()
+
+	for key in communities.keys() & ground_truth.keys():
+		precision[key] = len(set(communities[key]) & set(ground_truth[key]))
+
+	for key in precision:
+		try:
+			recall[key] = precision[key] / len(ground_truth[key])
+		except:
+			recall[key] = 0.0
+		try:
+			precision[key] = precision[key] / len(communities[key])
+		except:
+			precision[key] = 0.0
+		try:
+			f1_score[key] = 2 * (recall[key] * precision[key]) / (recall[key] + precision[key])
+		except:
+			f1_score[key] = 0.0
+
+
+	avg_precision = 0.0
+	avg_recall = 0.0
+	avg_f1score = 0.0
+
+	for key in precision:
+		avg_precision += precision[key]
+		avg_recall += recall[key]
+		avg_f1score += f1_score[key]
+
+	return avg_precision / len(communities) , avg_recall / len(communities), avg_f1score / len(communities)
 
 
 def main():
@@ -109,10 +164,19 @@ def main():
 
 	args = utils.create_argument_parser()
 	graph = utils.load_graph(args.dataset, args.w)
-	intended_node = int(args.output)
 
-	community = community_search(graph, intended_node)
-	print('community =', community, len(community))
+	communities = dict()
+
+	print('\n\n')
+	for e, node in enumerate(sorted(graph.nodes())):
+		community = community_search(graph, node)
+		communities[node] = community
+		# print('  Node =', node, ' : degree =', graph.degree[node], '->\t', community, '\t', len(community))
+
+	ground_truth = read_ground_truth(args.output)
+	precision, recall, f1_score = calc_accuracy(communities, ground_truth)
+
+	print('precision =', precision, '\trecall =', recall, '\tf1-score =', f1_score)
 
 	finish_time = time.time()
 	print('\nDone in %.4f seconds.' %(finish_time - start_time))
