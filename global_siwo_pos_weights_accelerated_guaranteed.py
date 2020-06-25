@@ -542,10 +542,10 @@ def main():
 
 	communities = utils.extract_communities(partition)
 	utils.print_comm_info_to_display(communities)
-	utils.write_comm_info_to_file(args.output, partition)
+	# utils.write_comm_info_to_file(args.output, partition)
 
-	# print('modularity_value =', modularity(graph, communities))
-	# print('NMI =', NMI(args.output, partition))
+	print('modularity_value =', modularity(graph, communities))
+	print('NMI =', NMI(args.output, partition))
 
 	finish_time = time.time()
 	print('\nDone in %.4f seconds.' %(finish_time - start_time))
