@@ -1,6 +1,7 @@
 import networkx as nx
 import statistics as stat
 from sklearn.metrics.cluster import normalized_mutual_info_score
+import utils
 
 
 def density(graph, node2com, com2nodes, weight='weight'):
@@ -491,5 +492,24 @@ def NMI(node2com_true_filename, node2com_pred):
     for key in labels_true_dict.keys() & node2com_pred.keys():
         labels_true.append(labels_true_dict[key])
         labels_pred.append(node2com_pred[key])
-
+        
     return normalized_mutual_info_score(labels_true, labels_pred, average_method='arithmetic')
+
+
+
+# if __name__ == "__main__":
+#     args = utils.create_argument_parser()
+#     graph = utils.load_graph(args.dataset, False)
+
+#     com2nodes = dict()
+#     with open(args.output, 'r') as file:
+#         lines = file.readlines()
+#         for i in range(len(lines)):
+#             line = lines[i]
+#             line = line.split()
+#             if not int(line[1]) in com2nodes:
+#                 com2nodes[int(line[1])] = [int(line[0])]
+#             else:
+#                 com2nodes[int(line[1])].append(int(line[0]))
+
+#     print('modularity_value =', modularity(graph, com2nodes))
