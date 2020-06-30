@@ -4,6 +4,7 @@ import networkx as nx
 from collections import defaultdict
 import measures
 
+
 def create_argument_parser():
 	"""This function reads the command line argument and parse them
 	
@@ -228,8 +229,9 @@ def report_performance(graph, partition, ground_truth_file_address):
 		for node in nodes:
 			node2com[node] = com_index
 
-	print('Modularity = %.3f' %(measures.modularity(graph, com2nodes)), end='\t')
-	print('NMI = %.3f' %(measures.NMI(ground_truth_file_address, node2com)))
+	report_str = 'Modularity = ' +str(measures.modularity(graph, com2nodes))[:5] + '\t'
+	report_str += 'NMI = ' +str(measures.NMI(ground_truth_file_address, node2com))[:5]
+	return report_str
 
 
 def update_performance_info(node, performance_info, community_pred, ground_truth_com2nodes):
@@ -265,3 +267,100 @@ def update_performance_info(node, performance_info, community_pred, ground_truth
 	performance_info[node]['recall'] = recall
 	performance_info[node]['precision'] = precision
 	performance_info[node]['f1_score'] = f1_score
+
+
+def amend_community_size_one(graph, partition, size_one_coms):
+	"""merges given communities of size one into another community that suits the best.
+
+	Args:
+		graph ([nx.Graph]): [the given network]
+		partition ([list]): [list of all discovered communities with more than two nodes]
+		size_one_coms ([list]): [list of network's all communities of size one]
+
+	Returns:
+		[list]: [list of all communities after amending the communities of size one]
+	"""
+	for com in size_one_coms:
+		neighbors = set(graph.neighbors(com[0]))
+		# define dict of strength for comparison
+		strength = dict()
+		for neigh in neighbors:
+			for i in range(len(partition)):
+				if neigh in partition[i] and graph.has_edge(com[0], neigh):
+					strength[i] = strength.get(i, 0.0) + graph[com[0]][neigh].get('weight', 0.0)
+					break
+
+		# find best community based on highest strength
+		best_com_index = list(strength.keys())[0]
+		for i in strength:
+			if strength[i] > strength[best_com_index]:
+				best_com_index = i
+		partition[best_com_index] = sorted(partition[best_com_index] + com)
+
+	return partition
+
+
+def amend_community_size_two(graph, partition, size_two_coms):
+	"""merges given communities of size two into another community that suits the best.
+
+	Args:
+		graph ([nx.Graph]): [the given network]
+		partition ([list]): [list of all discovered communities with more than two nodes]
+		size_two_coms ([list]): [list of network's all communities of size two]
+
+	Returns:
+		[list]: [list of all communities after amending the communities of size two]
+	"""
+	for com in size_two_coms:
+		neighbors = set(graph.neighbors(com[0]))
+		neighbors.update(graph.neighbors(com[1]))
+		# define dict of strength for comparison
+		strength = dict()
+		for neigh in neighbors:
+			for i in range(len(partition)):
+				if neigh in partition[i]:
+					if graph.has_edge(com[0], neigh):
+						strength[i] = strength.get(i, 0.0) + graph[com[0]][neigh].get('weight', 0.0)
+					if graph.has_edge(com[1], neigh):
+						strength[i] = strength.get(i, 0.0) + graph[com[1]][neigh].get('weight', 0.0)
+					break
+
+	# find best community based on highest strength
+		best_com_index = list(strength.keys())[0]
+		for i in strength:
+			if strength[i] > strength[best_com_index]:
+				best_com_index = i
+		partition[best_com_index] = sorted(partition[best_com_index] + com)
+
+	return partition
+
+
+def amend_partition(graph, partition):
+	"""amends the detected partition by merging communities of size 1 or 2 to the other communities in the partition.
+
+	Args:
+		graph ([nx.Graph]): [the given network]
+		partition ([list]): [list of all detected communities]
+
+	Returns:
+		[list]: [list of all communities after amendment]
+	"""
+	size_one_coms = [x for x in partition if len(x) == 1]
+	size_two_coms = [x for x in partition if len(x) == 2]
+
+	# remove communities of size 1 or 2 from the partition
+	if size_one_coms or size_two_coms:
+		i = 0
+		while i < len(partition):
+			if len(partition[i]) < 3:
+				partition.pop(i)
+				i -= 1
+			i += 1
+
+	if size_one_coms != []:
+		partition = amend_community_size_one(graph, partition, size_one_coms)
+
+	if size_two_coms != []:
+		partition = amend_community_size_two(graph, partition, size_two_coms)
+
+	return partition

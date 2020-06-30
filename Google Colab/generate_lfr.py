@@ -101,7 +101,7 @@ def write_to_file(G, node2com, com2nodes, edgelist_filename, community_filename)
 			file.write(lineTowrite)
 	
 
-def run_generator(num_nodes, tau1, tau2, mu, min_degree):
+def run_generator(num_nodes, tau1, tau2, mu, min_degree, prefix=''):
 	"""runs the network generator, extract ground-truth communities, print network information, and write to file.
 
 	Args:
@@ -111,11 +111,12 @@ def run_generator(num_nodes, tau1, tau2, mu, min_degree):
 		mu ([float]): [fraction of intra-community edges to each node]
 		min_degree ([int]): [minimum degree of a node in the network]
 		max_degree ([int]): [maximum degree of a node in the network]
+		prefix (str, optional): [adds a prefix to filenames]. Defaults to ''.
 	"""
 	start_time = time.time()
 
-	graph_name = 'edgelist_' + str(num_nodes) + '_' + str(tau1) + '_' + str(tau2) + '_' + str(mu) + '_' + str(min_degree)
-	comms_name = 'comslist_' + str(num_nodes) + '_' + str(tau1) + '_' + str(tau2) + '_' + str(mu) + '_' + str(min_degree)
+	graph_name = str(prefix) + '_edgelist_' + str(num_nodes) + '_' + str(tau1) + '_' + str(tau2) + '_' + str(mu) + '_' + str(min_degree)
+	comms_name = str(prefix) + '_comslist_' + str(num_nodes) + '_' + str(tau1) + '_' + str(tau2) + '_' + str(mu) + '_' + str(min_degree)
 
 	synthetic_network = generate_the_network(num_nodes, tau1, tau2, mu, min_degree, max_degree=num_nodes)
 	if synthetic_network != None:

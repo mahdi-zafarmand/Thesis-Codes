@@ -34,6 +34,7 @@ def update_mutual_dicts(graph, node, mutuals, max_mutuals):
 			mutuals[neigh] = {}
 			max_mutuals[neigh] = -1
 
+		# cur_mutual : number of triangles that edge(node, neigh) belongs to
 		cur_mutual = sum(1 for _ in nx.common_neighbors(graph, node, neigh))
 		mutuals[node][neigh] = cur_mutual
 		mutuals[neigh][node] = cur_mutual
@@ -116,7 +117,7 @@ def amend_for_community_search(graph, community):
 			if graph.degree[neigh] == 1:
 				dangles.append(neigh)
 
-	return sorted(community + dangles)
+	return sorted(set(community + dangles))
 
 
 def community_search(graph, intended_node):
@@ -127,7 +128,7 @@ def community_search(graph, intended_node):
 		intended_node ([int]): [a node in the network that starts the community expansion]
 
 	Returns:
-		[tuple]: [the discovered community and its quality based on SIWO Function]
+		[list]: [the discovered community]
 	"""
 	start_time = time.time()
 	graph_copy = deepcopy(graph)
@@ -161,105 +162,8 @@ def community_search(graph, intended_node):
 		candidates.extend(graph_copy.neighbors(new_node))
 		candidates = list(set(candidates) - set(community))
 
-	community = amend_for_community_search(graph_copy, community)
+	# community = amend_for_community_search(graph_copy, community)
 	return community
-
-
-def amend_community_size_one(graph, partition, size_one_coms):
-	"""merges given communities of size one into another community that suits the best.
-
-	Args:
-		graph ([nx.Graph]): [the given network]
-		partition ([list]): [list of all discovered communities with more than two nodes]
-		size_one_coms ([list]): [list of network's all communities of size one]
-
-	Returns:
-		[list]: [list of all communities after amending the communities of size one]
-	"""
-	for com in size_one_coms:
-		neighbors = set(graph.neighbors(com[0]))
-		# define dict of strength for comparison
-		strength = dict()
-		for neigh in neighbors:
-			for i in range(len(partition)):
-				if neigh in partition[i] and graph.has_edge(com[0], neigh):
-					strength[i] = strength.get(i, 0.0) + graph[com[0]][neigh].get('weight', 0.0)
-					break
-
-		# find best community based on highest strength
-		best_com_index = list(strength.keys())[0]
-		for i in strength:
-			if strength[i] > strength[best_com_index]:
-				best_com_index = i
-		partition[best_com_index] = sorted(partition[best_com_index] + com)
-
-	return partition
-
-
-def amend_community_size_two(graph, partition, size_two_coms):
-	"""merges given communities of size two into another community that suits the best.
-
-	Args:
-		graph ([nx.Graph]): [the given network]
-		partition ([list]): [list of all discovered communities with more than two nodes]
-		size_two_coms ([list]): [list of network's all communities of size two]
-
-	Returns:
-		[list]: [list of all communities after amending the communities of size two]
-	"""
-	for com in size_two_coms:
-		neighbors = set(graph.neighbors(com[0]))
-		neighbors.update(graph.neighbors(com[1]))
-		# define dict of strength for comparison
-		strength = dict()
-		for neigh in neighbors:
-			for i in range(len(partition)):
-				if neigh in partition[i]:
-					if graph.has_edge(com[0], neigh):
-						strength[i] = strength.get(i, 0.0) + graph[com[0]][neigh].get('weight', 0.0)
-					if graph.has_edge(com[1], neigh):
-						strength[i] = strength.get(i, 0.0) + graph[com[1]][neigh].get('weight', 0.0)
-					break
-
-	# find best community based on highest strength
-		best_com_index = list(strength.keys())[0]
-		for i in strength:
-			if strength[i] > strength[best_com_index]:
-				best_com_index = i
-		partition[best_com_index] = sorted(partition[best_com_index] + com)
-
-	return partition
-
-
-def amend_partition(graph, partition):
-	"""amends the detected partition by merging communities of size 1 or 2 to the other communities in the partition.
-
-	Args:
-		graph ([nx.Graph]): [the given network]
-		partition ([list]): [list of all detected communities]
-
-	Returns:
-		[list]: [list of all communities after amendment]
-	"""
-	size_one_coms = [x for x in partition if len(x) == 1]
-	size_two_coms = [x for x in partition if len(x) == 2]
-
-	# remove communities of size 1 or 2 from the partition
-	if size_one_coms or size_two_coms:
-		i = 0
-		while i < len(partition):
-			if len(partition[i]) < 3:
-				partition.pop(i)
-				i -= 1
-			i += 1
-
-	if size_one_coms != []:
-		partition = amend_community_size_one(graph, partition, size_one_coms)
-
-	if size_two_coms != []:
-		partition = amend_community_size_two(graph, partition, size_two_coms)
-
-	return partition
 
 
 def community_detection(graph, ground_truth_file_address):
@@ -316,10 +220,9 @@ def community_detection(graph, ground_truth_file_address):
 		graph_copy.remove_nodes_from(community)
 		all_communities.append(community)													# sort is for better representation only!
 
-	all_communities = amend_partition(graph, all_communities)	
-	utils.report_performance(graph, all_communities, ground_truth_file_address)
-
-	print('Community Detection Task is done in %.4f seconds.' %(time.time() - start_time))
+	all_communities = utils.amend_partition(graph, all_communities)	
+	report = utils.report_performance(graph, all_communities, ground_truth_file_address)
+	print(report, '\tCommunity Detection Task is done in %.4f seconds.' %(time.time() - start_time))
 	return all_communities
 
 
@@ -344,7 +247,9 @@ def community_search_for_all_nodes(graph, ground_truth_file_address):
 	f1_score = sum(performance_info[x]['f1_score'] for x in list(graph.nodes())) / graph.number_of_nodes()
 	sd = sqrt(sum((performance_info[x]['f1_score'] - f1_score) ** 2 for x in list(graph.nodes())) / graph.number_of_nodes())
 
-	print('precision =', precision, '   recall =', recall, '   f1-score =', f1_score, '   sd(fscore) =', sd)
+	print('precision = %.4f' %precision, end='\t')
+	print('recall = %.4f' %recall, end='\t')
+	print('f1-score = %.4f' %f1_score, end='\t')
+	print('sd(fscore) = %.4f' %sd, end='\t')
 	finish_time = time.time()
-	print('Community Search for all nodes is done in %.4f seconds.' %(finish_time - start_time))
-
+	print('time = %.4f' %(finish_time - start_time))
