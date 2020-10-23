@@ -1,4 +1,5 @@
 from copy import deepcopy
+import utils
 
 
 class CommunitySearcher:
@@ -32,10 +33,7 @@ class CommunitySearcher:
 
 	def remove_self_loops(self):
 		# algorithms tend to work better if there is no self-loop in the given graph, so we call this method at first.
-		nodes = [node for node in self.graph.nodes() if (node in self.nodes_to_be_ignored) is False]
-		for node in nodes:
-			if self.graph.has_edge(node, node):
-				self.graph.remove_edge(node, node)
+		utils.remove_self_loops(self.graph)
 
 	def set_start_node(self, start_node):
 		# check the validity of the given start_node, then puts it in the community and initialize the shell set.

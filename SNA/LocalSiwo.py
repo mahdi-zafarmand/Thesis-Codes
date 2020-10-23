@@ -132,29 +132,3 @@ class LocalSiwoCommunityDetection(CommunityDetector):
 		# initialize the object
 		super().__init__('Local SIWO', graph)
 		self.local_searcher = LocalSiwoCommunityDiscovery(graph)
-		self.dict_common_neighbors = {}
-		self.max_common_neighbors = {}
-		self.strength_assigned_nodes = set()
-
-	def community_detection(self, node_selection_mode, with_amend=False, overlap_enabled=False):
-		# THE MAIN FUNCTION OF THE CLASS, finds all communities of the graph.
-
-		while self.number_discovered_nodes < self.graph.number_of_nodes():
-			self.select_starting_node(node_selection_mode)
-			community = self.local_searcher.community_search(start_node=self.starting_nodes[-1], with_amend=with_amend)
-			self.partition.append(community)
-			self.local_searcher.reset()
-			self.update_number_discovered_nodes()
-
-			if overlap_enabled:
-				self.local_searcher.empty_ignored_nodes()
-			else:
-				self.local_searcher.fill_ignored_nodes(community)
-
-		# # for debug
-		# print(self.starting_nodes)
-
-		if with_amend:
-			self.amend_partition()
-
-		return self.partition

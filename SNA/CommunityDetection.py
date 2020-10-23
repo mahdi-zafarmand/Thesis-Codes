@@ -1,14 +1,15 @@
-import networkx as nx
 from copy import deepcopy
-from random import choice
+import utils
 
 
 class CommunityDetector:
 	# minimum_improvement = 0.000001    # I think it is not practical.
 
 	def __init__(self, name, graph):
+		# initialize the object.
 		self.name = name
 		self.graph = deepcopy(graph)
+		self.local_searcher = None
 		self.nodes_to_be_ignored = []
 		self.overlap_enable = False
 		self.node_selection_mode = 'random'
@@ -19,18 +20,19 @@ class CommunityDetector:
 		self.remove_self_loops()
 
 	def remove_self_loops(self):
-		nodes = [node for node in self.graph.nodes() if (node in self.nodes_to_be_ignored) is False]
-		for node in nodes:
-			if self.graph.has_edge(node, node):
-				self.graph.remove_edge(node, node)
+		# algorithms tend to work better if there is no self-loop in the given graph, so we call this method at first.
+		utils.remove_self_loops(self.graph)
 
-	def update_number_discovered_nodes(self):
+	def update_discovered_nodes_info(self):
+		# after a community is found and appended to the 'self.partition', we need to update 2 attributes of the class.
 		for node in self.partition[-1]:
 			if (node in self.discovered_nodes) is False:
 				self.discovered_nodes.add(node)
 				self.number_discovered_nodes += 1
 
-	def select_starting_node(self, mode):
+	def determine_starting_node(self, mode):
+		# check the validity of the given mode, sets the 'self.node_selection_mode'
+		# and adds the newest starting node to 'self.starting_nodes'.
 		if mode == 'random':
 			self.node_selection_mode = 'random'
 			self.starting_nodes.append(self.find_random_node_in_graph())
@@ -43,31 +45,35 @@ class CommunityDetector:
 			exit(-1)
 
 	def find_random_node_in_graph(self):
-		nodes = list(self.graph.nodes())
-		for node in self.nodes_to_be_ignored:
-			nodes.remove(node)
-		for node in self.discovered_nodes:
-			nodes.remove(node)
-		return choice(nodes)
+		# returns a random node among nodes of the 'self.graph', except the ones that should be ignored.
+		all_nodes_to_be_ignore = [self.nodes_to_be_ignored, self.discovered_nodes]
+		return utils.find_random_node_in_graph(self.graph, all_nodes_to_be_ignore)
 
 	def find_highest_degree_node_in_graph(self):
-		nodes = list(self.graph.nodes())
-		for node in self.nodes_to_be_ignored:
-			nodes.remove(node)
-		for node in self.discovered_nodes:
-			nodes.remove(node)
+		# returns the node with the highest degree among nodes of the 'self.graph', except the ones that should be ignored.
+		all_nodes_to_be_ignore = [self.nodes_to_be_ignored, self.discovered_nodes]
+		return utils.find_highest_degree_node_in_graph(self.graph, all_nodes_to_be_ignore)
 
-		node_with_highest_degree = nodes[0]
-		for node_index in range(1, len(nodes)):
-			if self.graph.degree[nodes[node_index]] > self.graph.degree[node_with_highest_degree]:
-				node_with_highest_degree = nodes[node_index]
+	def community_detection(self, node_selection_mode, overlap_enabled=False, with_amend=True):
+		# THE MAIN FUNCTION OF THE CLASS, finds all communities of the graph.
+		while self.number_discovered_nodes < self.graph.number_of_nodes():
+			self.determine_starting_node(node_selection_mode)
+			community = self.local_searcher.community_search(start_node=self.starting_nodes[-1], with_amend=with_amend)
+			self.partition.append(community)
+			self.local_searcher.reset()
+			self.update_discovered_nodes_info()
 
-		return node_with_highest_degree
+			if overlap_enabled:
+				self.local_searcher.empty_ignored_nodes()
+			else:
+				self.local_searcher.fill_ignored_nodes(community)
 
-	def community_detection(self, graph, node_selection_mode, overlap_enabled=False):
-		pass
+		if with_amend:
+			self.amend_partition()
+		return self.partition
 
 	def compute_modularity(self, neighbor_node):
+		# may not be required.
 		pass
 
 	def amend_partition(self):
